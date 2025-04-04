@@ -1,0 +1,15 @@
+name: pss2-csv-reader-env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - plotly
+  - pyside6
+  - python=3.12
+  - qt-material
+  - scikit-image
+  - scipy
+  - pyinstaller
+prefix: C:\Users\joshua\AppData\Local\anaconda3\envs\pss2-csv-reader-env
