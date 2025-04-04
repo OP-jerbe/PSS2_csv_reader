@@ -1,11 +1,13 @@
 import pandas as pd
-import sys
+import os
+import plotly.graph_objects as go
 import traceback
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QApplication
 from dataclasses import dataclass
 
 @ dataclass
 class TestData:
+    csv_title: str | None
     time: pd.Series | None
     voltage: pd.Series | None
     current: pd.Series | None
@@ -62,6 +64,7 @@ class CSVLoader:
         """
 
         try:
+            csv_title = os.path.basename(filepath)
             df: pd.DataFrame = pd.read_csv(filepath, skiprows=[1], usecols=[5,6,7])
             df.rename(columns={'TIME':'Time'}, inplace=True)
             df.rename(columns={'VOLTAGE':'Voltage (kV)'}, inplace=True)
@@ -69,19 +72,77 @@ class CSVLoader:
             df['Time'] = pd.to_datetime(df['Time'], format='%m/%d/%Y %I:%M:%S %p')
             df['Voltage (kV)'] = df['Voltage (kV)'].str.replace('kV', '', regex=True).astype(float)
             df['Current (mA)'] = df['Current (mA)'].str.replace('mA', '', regex=True).astype(float)
-            return TestData(time=df['Time'],
+            return TestData(csv_title=csv_title,
+                            time=df['Time'],
                             voltage=df['Voltage (kV)'],
                             current=df['Current (mA)'])
         except Exception as e:
             full_traceback = traceback.format_exc()
             print(f'Error: {e}\n{full_traceback}')
-            return TestData(time=None,
+            return TestData(csv_title=None,
+                            time=None,
                             voltage=None,
                             current=None)
-        
+
+def plot_test_data(data: TestData) -> go.Figure:
+    fig = go.Figure()
+
+    voltage_color = 'blue'
+    current_color = 'red'
+    label_style = dict(size=16, weight="bold")  # Font size and bold style
+
+    # Add voltage trace
+    if data.time is not None and data.voltage is not None:
+        fig.add_trace(go.Scatter(x=data.time, y=data.voltage, mode='lines', name='Voltage (kV)', line=dict(color=voltage_color)))
+
+    # Add current trace
+    if data.time is not None and data.current is not None:
+        fig.add_trace(go.Scatter(x=data.time, y=data.current, mode='lines', name='Current (mA)', line=dict(color=current_color), yaxis='y2'))
+
+    # Update layout for secondary y-axis
+    fig.update_layout(
+        title=data.csv_title,
+        xaxis_title="Time",
+        yaxis=dict(title="Voltage",
+                   title_font={**label_style, "color": voltage_color},
+                   range=[0, 41],
+        ),
+        yaxis2=dict(
+            title="Current",
+            title_font={**label_style, "color": current_color},
+            overlaying="y",
+            side="right",
+            range=[0, 0.061],
+        ),
+        showlegend=False
+    )
+
+    fig.show()
+
+    return fig
+
+def save_plot(fig: go.Figure) -> None:
+    options = QFileDialog.Options() # type:ignore
+    options |= QFileDialog.Option.HideNameFilterDetails
+    file_path, _ = QFileDialog.getSaveFileName(
+        None,
+        "Save Plot As",
+        "",
+        "HTML Files (*.html);;All Files (*)",
+        options=options
+    )
+
+    if file_path:
+        # Save the plot to the chosen file location
+        fig.write_html(file_path)
+        print(f"Plot saved as {file_path}")
+    else:
+        print("Save operation was canceled.")
+
 if __name__ == '__main__':
-    from PySide6.QtWidgets import QApplication
     QApplication([])
     csv_loader: CSVLoader = CSVLoader()
     filepath: str = csv_loader.select_csv()
     test_data: TestData = csv_loader.load_test_data(filepath)
+    fig = plot_test_data(test_data)
+    save_plot(fig)
