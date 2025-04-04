@@ -103,12 +103,12 @@ def plot_test_data(data: TestData) -> go.Figure:
     fig.update_layout(
         title=data.csv_title,
         xaxis_title="Time",
-        yaxis=dict(title="Voltage",
+        yaxis=dict(title="Voltage (kV)",
                    title_font={**label_style, "color": voltage_color},
                    range=[0, 41],
         ),
         yaxis2=dict(
-            title="Current",
+            title="Current (mA)",
             title_font={**label_style, "color": current_color},
             overlaying="y",
             side="right",
