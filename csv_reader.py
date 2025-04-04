@@ -144,5 +144,5 @@ if __name__ == '__main__':
     csv_loader: CSVLoader = CSVLoader()
     filepath: str = csv_loader.select_csv()
     test_data: TestData = csv_loader.load_test_data(filepath)
-    fig = plot_test_data(test_data)
+    fig: go.Figure = plot_test_data(test_data)
     save_plot(fig)
