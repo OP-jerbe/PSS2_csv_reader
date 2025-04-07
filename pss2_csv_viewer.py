@@ -1,9 +1,12 @@
-import pandas as pd
 import os
-import plotly.graph_objects as go
 import traceback
-from PySide6.QtWidgets import QFileDialog, QApplication
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.graph_objects import Figure
+from PySide6.QtWidgets import QApplication, QFileDialog
 from dataclasses import dataclass
+
+DIRECTORY = r"C:\Users\joshua\Documents\Epoxy FT HV Tests"
 
 @ dataclass
 class TestData:
@@ -14,8 +17,6 @@ class TestData:
 
 
 class CSVLoader:
-    def __init__(self):
-        ...
 
     def select_csv(self) -> str:
         """
@@ -25,20 +26,15 @@ class CSVLoader:
             str: The path to the selected CSV file. If no file is selected, an empty string is returned.
 
         Notes:
-            The file dialog starts in the Production History directory and filters for CSV files.
             If no file is selected, the function will return an empty string.
         """
-        dir = r"C:\Users\joshua\Documents\Epoxy FT HV Tests"
         
-        caption = 'Choose CSV Files'
-        initial_dir = dir
-        file_types = 'CSV Files (*.csv);;All Files (*)'
         # Open the file dialog
         filepath, _ = QFileDialog.getOpenFileName(
-            None,                      # Parent widget, can be None
-            caption,                   # Dialog title
-            initial_dir,               # Initial directory
-            file_types                 # Filter for file types
+            parent=None,                      # Parent widget, can be None
+            caption='Choose CSV Files',                   # Dialog title
+            dir=DIRECTORY,               # Initial directory
+            filter='CSV Files (*.csv);;All Files (*)'                 # Filter for file types
         )
         
         return filepath
@@ -51,16 +47,8 @@ class CSVLoader:
             filepath (str): The path to the CSV file containing the test data.
 
         Returns:
-            TestData: An object containing the parsed scan data, including serial number, 
-                    scan datetime, step size, resolution, x and y coordinates, cup 
-                    current, screen current, total current, polarity, beam voltage, 
-                    and extractor voltage.
-
-        Notes:
-            The function reads specific metadata from the first few rows of the CSV file
-            and uses the rest of the data to populate the scan data. The beam voltage 
-            is used to determine the scan polarity ('NEG' or 'POS'), and the step size 
-            is used to determine the scan resolution (Ultra, High, or Med).
+            TestData: An object containing the parsed test data, including the csv title,
+            time stamps, voltage readings, and current readings.
         """
 
         try:
@@ -84,7 +72,8 @@ class CSVLoader:
                             voltage=None,
                             current=None)
 
-def plot_test_data(data: TestData) -> go.Figure:
+
+def plot_test_data(data: TestData) -> Figure:
     fig = go.Figure()
 
     voltage_color = 'blue'
@@ -121,28 +110,27 @@ def plot_test_data(data: TestData) -> go.Figure:
 
     return fig
 
-def save_plot(fig: go.Figure) -> None:
-    options = QFileDialog.Options() # type:ignore
-    options |= QFileDialog.Option.HideNameFilterDetails
-    file_path, _ = QFileDialog.getSaveFileName(
-        None,
-        "Save Plot As",
-        "",
-        "HTML Files (*.html);;All Files (*)",
-        options=options
+
+def save_plot(fig: Figure) -> None:
+    filepath, _ = QFileDialog.getSaveFileName(
+        parent=None,
+        caption="Save Plot As",
+        dir=DIRECTORY,
+        filter="HTML Files (*.html);;All Files (*)"
     )
 
-    if file_path:
+    if filepath:
         # Save the plot to the chosen file location
-        fig.write_html(file_path)
-        print(f"Plot saved as {file_path}")
+        fig.write_html(filepath)
+        print(f"Plot saved as {filepath}")
     else:
         print("Save operation was canceled.")
 
+
 if __name__ == '__main__':
-    QApplication([])
+    QApplication([]) # this is needed to use the QFileDialog method
     csv_loader: CSVLoader = CSVLoader()
     filepath: str = csv_loader.select_csv()
     test_data: TestData = csv_loader.load_test_data(filepath)
-    fig: go.Figure = plot_test_data(test_data)
+    fig: Figure = plot_test_data(test_data)
     save_plot(fig)
