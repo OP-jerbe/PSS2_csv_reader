@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from plotly.graph_objects import Figure
 from PySide6.QtWidgets import QApplication, QFileDialog
 
-DIRECTORY = r"C:\Users\joshua\Documents\Epoxy FT HV Tests"
+DIRECTORY = r"\\opdata2\Company\ENGINEERING\HV Feedthru\Epoxy FT HV Tests"
 
 
 @dataclass
