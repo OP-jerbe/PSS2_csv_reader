@@ -1,13 +1,14 @@
-import os
+import tkinter as tk
 import traceback
 from dataclasses import dataclass
+from pathlib import Path
+from tkinter import filedialog
 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.graph_objects import Figure
-from PySide6.QtWidgets import QApplication, QFileDialog
 
-DIRECTORY = r"\\opdata2\Company\ENGINEERING\HV Feedthru\Epoxy FT HV Tests"
+DIRECTORY = Path(r"\\opdata2\Company\ENGINEERING\HV Feedthru\Epoxy FT HV Tests")
 
 
 @dataclass
@@ -23,41 +24,28 @@ class TestData:
 
 
 class CSVLoader:
-    def select_csv(self) -> str:
+    def select_csv(self) -> Path | None:
         """
         Open a file dialog to select a CSV file.
 
         Returns:
-            str: The path to the selected CSV file. If no file is selected, an empty string is returned.
-
-        Notes:
-            If no file is selected, the function will return an empty string.
+            Path | None: The path to the selected CSV file, or None if no file is selected.
         """
-
-        # Open the file dialog
-        filepath, _ = QFileDialog.getOpenFileName(
-            parent=None,  # Parent widget, can be None
-            caption="Choose CSV Files",  # Dialog title
-            dir=DIRECTORY,  # Initial directory
-            filter="CSV Files (*.csv);;All Files (*)",  # Filter for file types
+        root = tk.Tk()
+        root.withdraw()
+        filepath = filedialog.askopenfilename(
+            title="Choose CSV File",
+            initialdir=DIRECTORY,
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")],
         )
+        return Path(filepath) if filepath else None
 
-        return filepath
-
-    def load_test_data(self, filepath: str) -> TestData:
+    def load_test_data(self, filepath: Path) -> TestData:
         """
         Load scan data from a CSV file and return a TestData object.
-
-        Args:
-            filepath (str): The path to the CSV file containing the test data.
-
-        Returns:
-            TestData: An object containing the parsed test data, including the csv title,
-            time stamps, voltage readings, and current readings.
         """
-
         try:
-            csv_title = os.path.basename(filepath)
+            csv_title = filepath.name
             df: pd.DataFrame = pd.read_csv(filepath, skiprows=[1], usecols=[5, 6, 7])
             df.rename(columns={"TIME": "Time"}, inplace=True)
             df.rename(columns={"VOLTAGE": "Voltage (kV)"}, inplace=True)
@@ -86,9 +74,8 @@ def plot_test_data(data: TestData) -> Figure:
 
     voltage_color = "blue"
     current_color = "red"
-    label_style = dict(size=16, weight="bold")  # Font size and bold style
+    label_style = dict(size=16, weight="bold")
 
-    # Add voltage trace
     if data.time is not None and data.voltage is not None:
         fig.add_trace(
             go.Scatter(
@@ -100,7 +87,6 @@ def plot_test_data(data: TestData) -> Figure:
             )
         )
 
-    # Add current trace
     if data.time is not None and data.current is not None:
         fig.add_trace(
             go.Scatter(
@@ -113,7 +99,6 @@ def plot_test_data(data: TestData) -> Figure:
             )
         )
 
-    # Update layout for secondary y-axis
     fig.update_layout(
         title=data.csv_title,
         xaxis_title="Time",
@@ -133,30 +118,31 @@ def plot_test_data(data: TestData) -> Figure:
     )
 
     fig.show()
-
     return fig
 
 
 def save_plot(fig: Figure) -> None:
-    filepath, _ = QFileDialog.getSaveFileName(
-        parent=None,
-        caption="Save Plot As",
-        dir=DIRECTORY,
-        filter="HTML Files (*.html);;All Files (*)",
+    root = tk.Tk()
+    root.withdraw()
+    filepath = filedialog.asksaveasfilename(
+        title="Save Plot As",
+        initialdir=DIRECTORY,
+        defaultextension=".html",
+        filetypes=[("HTML Files", "*.html"), ("All Files", "*.*")],
     )
 
     if filepath:
-        # Save the plot to the chosen file location
-        fig.write_html(filepath)
-        print(f"Plot saved as {filepath}")
+        output_path = Path(filepath)
+        fig.write_html(output_path)
+        print(f"Plot saved as {output_path}")
     else:
         print("Save operation was canceled.")
 
 
 if __name__ == "__main__":
-    QApplication([])  # this is needed to use the QFileDialog method
-    csv_loader: CSVLoader = CSVLoader()
-    filepath: str = csv_loader.select_csv()
-    test_data: TestData = csv_loader.load_test_data(filepath)
-    fig: Figure = plot_test_data(test_data)
-    save_plot(fig)
+    csv_loader = CSVLoader()
+    filepath = csv_loader.select_csv()
+    if filepath:
+        test_data = csv_loader.load_test_data(filepath)
+        fig = plot_test_data(test_data)
+        save_plot(fig)
